@@ -1,8 +1,22 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  UsePipes,
+  ConflictException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { Public } from './decorators/public.decorator';
-import { User } from 'src/users/entities/user.entity';
+import {
+  LoginDto,
+  loginSchema,
+  RegisterDto,
+  registerSchema,
+} from './schema/auth.schema';
+import { ZodValidationPipe } from 'src/pipes/zod-validation.pipe';
 
 @Controller('auth')
 export class AuthController {
@@ -13,7 +27,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  async login(@Body() loginDto: { email: string; password: string }) {
+  @UsePipes(new ZodValidationPipe(loginSchema))
+  async login(@Body() loginDto: LoginDto) {
     try {
       const user = await this.authService.validateUser(
         loginDto.email,
@@ -22,11 +37,16 @@ export class AuthController {
       if (!user) {
         throw new UnauthorizedException('Invalid credentials');
       }
-      return this.authService.login({
+      const data = this.authService.login({
         email: user.email,
         id: user.id,
         role: user.role,
       });
+
+      return {
+        message: 'Login successful',
+        data: data,
+      };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -37,29 +57,33 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body() createUserDto: Partial<User>) {
+  @UsePipes(new ZodValidationPipe(registerSchema))
+  async register(
+    @Body()
+    createUserDto: RegisterDto,
+  ) {
     try {
-      // Check if user already exists
-      if (!createUserDto.email) {
-        throw new UnauthorizedException('Email is required');
-      }
-      const existingUser = await this.usersService.findOne(createUserDto.email);
+      const existingUser = await this.usersService.findOneByEmail(
+        createUserDto.email,
+      );
       if (existingUser) {
-        throw new UnauthorizedException('User already exists');
+        throw new ConflictException('User already exists');
       }
 
-      // Create new user
       const user = await this.usersService.create(createUserDto);
 
-      // Return user without password
-      const { password, ...result } = user;
-      return result;
+      return {
+        message: 'User registered successfully',
+        data: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        },
+      };
     } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      console.error('Registration error:', error);
-      throw new UnauthorizedException('An error occurred during registration');
+      throw new InternalServerErrorException(error);
     }
   }
 }

@@ -14,7 +14,7 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<Pick<User, 'email' | 'id' | 'role'> | null> {
-    const user = await this.usersService.findOne(email);
+    const user = await this.usersService.findOneByEmail(email);
 
     if (user && (await user.validatePassword(password))) {
       return {
@@ -29,7 +29,7 @@ export class AuthService {
   login({ email, id, role }: Pick<User, 'email' | 'id' | 'role'>) {
     const payload = { email, sub: id, role };
     return {
-      access_token: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload),
       user: {
         id,
         email,
