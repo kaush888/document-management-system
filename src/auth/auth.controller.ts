@@ -83,20 +83,15 @@ export class AuthController {
   })
   @ApiResponse({ status: 409, description: 'User already exists' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async register(
-    @Body()
-    createUserDto: RegisterDto,
-  ) {
+  async register(@Body() createUserDto: RegisterDto) {
     try {
-      const existingUser = await this.usersService.findOneByEmail(
-        createUserDto.email,
-      );
+      const existingUser = await this.usersService.findOneByEmail(createUserDto.email);
       if (existingUser) {
         throw new ConflictException('User already exists');
       }
-
+  
       const user = await this.usersService.create(createUserDto);
-
+  
       return {
         message: 'User registered successfully',
         data: {
@@ -108,7 +103,11 @@ export class AuthController {
         },
       };
     } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
       throw new InternalServerErrorException(error);
     }
   }
+  
 }
