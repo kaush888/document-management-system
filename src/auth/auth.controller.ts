@@ -7,6 +7,7 @@ import {
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import {
@@ -17,7 +18,14 @@ import {
 } from './schema/auth.schema';
 import { ZodValidationPipe } from 'src/pipes/zod-validation.pipe';
 import { UsersService } from 'src/users/users.service';
+import {
+  LoginResponse,
+  LoginDtoSwagger,
+  RegisterDtoSwagger,
+  RegisterResponse,
+} from './dto/auth.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -28,6 +36,14 @@ export class AuthController {
   @Public()
   @Post('login')
   @UsePipes(new ZodValidationPipe(loginSchema))
+  @ApiOperation({ summary: 'User login' })
+  @ApiBody({ type: LoginDtoSwagger })
+  @ApiResponse({
+    status: 200,
+    description: 'User logged in successfully',
+    type: LoginResponse,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
     try {
       const user = await this.authService.validateUser(
@@ -58,6 +74,15 @@ export class AuthController {
   @Public()
   @Post('register')
   @UsePipes(new ZodValidationPipe(registerSchema))
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiBody({ type: RegisterDtoSwagger })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    type: RegisterResponse,
+  })
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async register(
     @Body()
     createUserDto: RegisterDto,
