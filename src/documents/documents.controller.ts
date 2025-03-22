@@ -11,13 +11,9 @@ import {
   Req,
   UseGuards,
   ParseUUIDPipe,
-  UsePipes,
   BadRequestException,
 } from '@nestjs/common';
-import {
-  FileFieldsInterceptor,
-  FileInterceptor,
-} from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import {
   CreateDocumentDto,
@@ -25,12 +21,13 @@ import {
   createDocumentSchema,
   updateDocumentSchema,
 } from './schema/document.schema';
-import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/entities/user.entity';
 import { Request } from 'express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { UserRole } from 'src/users/entities/user.entity';
+import { ZodValidationPipe } from 'src/pipes/zod-validation.pipe';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { getFilePath } from 'src/utils/helper';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,10 +36,10 @@ export class DocumentsController {
 
   @Post()
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
-  @UsePipes(new ZodValidationPipe(createDocumentSchema))
   @UseInterceptors(FileInterceptor('file'))
   async create(
-    @Body() createDocumentDto: CreateDocumentDto,
+    @Body(new ZodValidationPipe(createDocumentSchema))
+    createDocumentDto: CreateDocumentDto,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
   ) {
@@ -66,6 +63,7 @@ export class DocumentsController {
         fileSize: document.fileSize,
         mimeType: document.mimeType,
         createdAt: document.createdAt,
+        fileUrl: getFilePath(document.filePath),
         owner: document.ownerId,
       },
     };
@@ -73,7 +71,9 @@ export class DocumentsController {
 
   @Get()
   async findAll(@Req() req: Request) {
-    const documents = await this.documentsService.findAll(req.user as any);
+    const documents = await this.documentsService.findAll(
+      req.user as Express.User,
+    );
 
     return {
       message: 'Documents retrieved successfully',
@@ -89,13 +89,17 @@ export class DocumentsController {
           email: doc.owner?.email,
         },
         createdAt: doc.createdAt,
+        fileUrl: getFilePath(doc.filePath),
       })),
     };
   }
 
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const document = await this.documentsService.findOne(id, req.user as any);
+    const document = await this.documentsService.findOne(
+      id,
+      req.user as Express.User,
+    );
 
     return {
       message: 'Document retrieved successfully',
@@ -118,16 +122,19 @@ export class DocumentsController {
 
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
-  @UsePipes(new ZodValidationPipe(updateDocumentSchema))
+  @UseInterceptors(FileInterceptor('file'))
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateDocumentDto: UpdateDocumentDto,
+    @Body(new ZodValidationPipe(updateDocumentSchema))
+    updateDocumentDto: UpdateDocumentDto,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
   ) {
     const document = await this.documentsService.update(
       id,
       updateDocumentDto,
-      req.user as any,
+      req.user as Express.User,
+      file,
     );
 
     return {
@@ -136,7 +143,15 @@ export class DocumentsController {
         id: document.id,
         title: document.title,
         description: document.description,
+        fileName: document.fileName,
+        fileSize: document.fileSize,
+        mimeType: document.mimeType,
         updatedAt: document.updatedAt,
+        fileUrl: getFilePath(document.filePath),
+        owner: {
+          id: document.owner?.id,
+          email: document.owner?.email,
+        },
       },
     };
   }
@@ -144,7 +159,7 @@ export class DocumentsController {
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
   async remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    await this.documentsService.remove(id, req.user as any);
+    await this.documentsService.remove(id, req.user as Express.User);
 
     return {
       message: 'Document deleted successfully',

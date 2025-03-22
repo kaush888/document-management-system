@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createDocumentSchema = z.object({
   title: z.string().nonempty('Title is required'),
-  description: z.string().optional(),
+  description: z.string().nonempty('Description is required'),
 });
 
 export type CreateDocumentDto = z.infer<typeof createDocumentSchema>;

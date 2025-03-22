@@ -8,8 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Document } from './entities/document.entity';
 import { CreateDocumentDto, UpdateDocumentDto } from './schema/document.schema';
-import { User, UserRole } from '../users/entities/user.entity';
 import * as fs from 'fs';
+import { UserRole } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class DocumentsService {
@@ -39,26 +39,24 @@ export class DocumentsService {
     }
   }
 
-  async findAll(user: User): Promise<Document[]> {
+  async findAll(user: Express.User): Promise<Document[]> {
     try {
-      // Admin can see all documents
-      if (user.role === UserRole.ADMIN) {
+      if ([UserRole.ADMIN, UserRole.VIEWER].includes(user.role)) {
         return await this.documentsRepository.find({
           relations: ['owner'],
         });
       }
 
-      // Editors and Viewers can only see their own documents
       return await this.documentsRepository.find({
         where: { ownerId: user.id },
         relations: ['owner'],
       });
     } catch (error) {
-      throw new InternalServerErrorException('Failed to retrieve documents');
+      throw new InternalServerErrorException(error);
     }
   }
 
-  async findOne(id: string, user: User): Promise<Document> {
+  async findOne(id: string, user: Express.User): Promise<Document> {
     try {
       const document = await this.documentsRepository.findOne({
         where: { id },
@@ -70,7 +68,10 @@ export class DocumentsService {
       }
 
       // Check if user is authorized to view this document
-      if (user.role !== UserRole.ADMIN && document.ownerId !== user.id) {
+      if (
+        ![UserRole.ADMIN, UserRole.VIEWER].includes(user.role) &&
+        document.ownerId !== user.id
+      ) {
         throw new ForbiddenException(
           'You are not authorized to view this document',
         );
@@ -91,37 +92,47 @@ export class DocumentsService {
   async update(
     id: string,
     updateDocumentDto: UpdateDocumentDto,
-    user: User,
+    user: Express.User,
+    file?: Express.Multer.File,
   ): Promise<Document> {
-    try {
-      const document = await this.findOne(id, user);
+    const document = await this.findOne(id, user);
 
-      // Check if user is authorized to update this document
-      if (
-        user.role !== UserRole.ADMIN &&
-        document.ownerId !== user.id &&
-        user.role !== UserRole.EDITOR
-      ) {
-        throw new ForbiddenException(
-          'You are not authorized to update this document',
-        );
-      }
-
-      // Update document properties
-      this.documentsRepository.merge(document, updateDocumentDto);
-      return await this.documentsRepository.save(document);
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to update document');
+    if (user.role !== UserRole.ADMIN && document.ownerId !== user.id) {
+      throw new ForbiddenException(
+        'You do not have permission to update this document',
+      );
     }
+
+    // Update document metadata
+    const updatedDocument = {
+      ...document,
+      ...updateDocumentDto,
+    };
+
+    // If a new file was uploaded, update file-related fields
+    if (file) {
+      // Delete the old file
+      try {
+        fs.unlinkSync(document.filePath);
+      } catch (error) {
+        // Log error but continue with update
+        console.error('Error deleting old file:', error);
+      }
+
+      // Update document with new file information
+      Object.assign(updatedDocument, {
+        fileName: file.originalname,
+        filePath: file.path,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+      });
+    }
+
+    // Save the updated document
+    return this.documentsRepository.save(updatedDocument);
   }
 
-  async remove(id: string, user: User): Promise<void> {
+  async remove(id: string, user: Express.User): Promise<void> {
     try {
       const document = await this.findOne(id, user);
 
