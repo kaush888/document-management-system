@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AppConfigModule } from './config/config.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AppConfigModule } from './config/config.module';
     TypeOrmModule.forRootAsync(databaseConfig),
     UsersModule,
     AuthModule,
+    DocumentsModule,
   ],
   controllers: [],
   providers: [

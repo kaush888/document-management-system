@@ -29,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (!user) {
         throw new UnauthorizedException();
       }
-      return { userId: user.id, email: user.email, role: user.role };
+      return { id: user.id, email: user.email, role: user.role };
     } catch (error) {
       if (error instanceof Error) {
         console.error('Error validating token:', error.message);

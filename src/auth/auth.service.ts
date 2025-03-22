@@ -27,7 +27,7 @@ export class AuthService {
   }
 
   login({ email, id, role }: Pick<User, 'email' | 'id' | 'role'>) {
-    const payload = { email, sub: id, role };
+    const payload = { email, id, role };
     return {
       token: this.jwtService.sign(payload),
       user: {
