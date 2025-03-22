@@ -8,6 +8,8 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AppConfigModule } from './config/config.module';
 import { DocumentsModule } from './documents/documents.module';
+import { IngestionModule } from './ingestion/ingestion.module';
+import { EmbeddingsModule } from './embeddings/embeddings.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { DocumentsModule } from './documents/documents.module';
     UsersModule,
     AuthModule,
     DocumentsModule,
+    IngestionModule,
+    EmbeddingsModule,
   ],
   controllers: [],
   providers: [

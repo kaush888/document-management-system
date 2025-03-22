@@ -8,7 +8,6 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
 import { Public } from './decorators/public.decorator';
 import {
   LoginDto,
@@ -17,6 +16,7 @@ import {
   registerSchema,
 } from './schema/auth.schema';
 import { ZodValidationPipe } from 'src/pipes/zod-validation.pipe';
+import { UsersService } from 'src/users/users.service';
 
 @Controller('auth')
 export class AuthController {
