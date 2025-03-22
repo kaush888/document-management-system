@@ -10,6 +10,7 @@ A full-featured document management system built with NestJS, featuring user aut
 - **Document Embeddings**: Generate and query document embeddings for semantic search
 - **File Storage**: Local file storage with configurable paths
 - **Database Integration**: PostgreSQL database with TypeORM
+- **API Documentation**: Interactive API documentation using Swagger
 
 ## Technologies
 
@@ -18,7 +19,7 @@ A full-featured document management system built with NestJS, featuring user aut
 - **Authentication**: JWT with Passport
 - **Validation**: Zod and class-validator
 - **File Handling**: Multer
-- **API Documentation**: Swagger (TODO)
+- **API Documentation**: Swagger
 
 ## Project Setup
 
@@ -111,6 +112,14 @@ npm run test:e2e
 npm run test:cov
 ```
 
+## API Documentation
+
+The application provides interactive API documentation using Swagger UI.
+
+### Accessing Swagger UI
+
+Once the application is running, navigate to: [http://localhost:3000/api](http://localhost:3000/api)
+
 ## Project Structure
 
 ```directory
@@ -131,3 +140,4 @@ src/
 ## License
 
 This project is [MIT licensed](LICENSE).
+
